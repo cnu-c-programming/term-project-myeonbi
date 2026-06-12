@@ -13,4 +13,9 @@ typedef struct Student {
 Student* createStudent(int id, const char* name, int score);
 void freeStudents(Student* head);
 
+Student* findStudent(Student* head, int id);
+int appendStudent(Student** head, Student* newStudent);
+int deleteStudent(Student** head, int id);
+int updateStudent(Student* head, int id, int score);
+
 #endif
