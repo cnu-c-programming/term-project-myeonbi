@@ -83,8 +83,31 @@ int loadCSV(const char* filename, Student** head) {
 }
 
 int saveCSV(const char* filename, Student* head) {
-    (void)filename;
-    (void)head;
+    FILE* fp = fopen(filename, "w");
 
-    return 0;
+    if (fp == NULL) {
+        printf("Error: cannot write CSV file.\n");
+        return -1;
+    }
+
+    fprintf(fp, "id,name,score\n");
+
+    int count = 0;
+
+    Student* current = head;
+
+    while (current != NULL) {
+        fprintf(fp,
+                "%d,%s,%d\n",
+                current->id,
+                current->name,
+                current->score);
+
+        current = current->next;
+        count++;
+    }
+
+    fclose(fp);
+
+    return count;
 }
