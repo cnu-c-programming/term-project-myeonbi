@@ -14,6 +14,7 @@ static ShellResult handle_reload(char* args, Student** head);
 static ShellResult handle_add(char* args, Student** head);
 static ShellResult handle_delete(char* args, Student** head);
 static ShellResult handle_update(char* args, Student** head);
+static ShellResult handle_sort(char* args, Student** head);
 static ShellResult handle_find(char* args, Student** head);
 static ShellResult handle_list(char* args, Student** head);
 static ShellResult handle_stats(char* args, Student** head);
@@ -28,6 +29,7 @@ static Command commands[] = {
     {"add", handle_add, "add <id> <name> <score>", "Add a student"},
     {"delete", handle_delete, "delete <id>", "Delete a student"},
     {"update", handle_update, "update <id> <score>", "Update student score"},
+    {"sort", handle_sort, "sort <name|score>", "Sort students"},
     {"find", handle_find, "find <id>", "Find student by ID"},
     {"list", handle_list, "list", "List all students"},
     {"stats", handle_stats, "stats", "Show statistics"},
@@ -224,6 +226,83 @@ static ShellResult handle_update(char* args, Student** head) {
 
     isModified = 1;
     printf("Student updated.\n");
+    return SHELL_OK;
+}
+
+static ShellResult handle_sort(char* args, Student** head) {
+    if (args == NULL) {
+        printf("Error: invalid sort key.\n");
+        return SHELL_ERR_INVALID_ARGUMENT;
+    }
+
+    int byName = 0;
+    int byScore = 0;
+
+    if (strcmp(args, "name") == 0) {
+        byName = 1;
+    }
+    else if (strcmp(args, "score") == 0) {
+        byScore = 1;
+    }
+    else {
+        printf("Error: invalid sort key.\n");
+        return SHELL_ERR_INVALID_ARGUMENT;
+    }
+
+    if (head == NULL || *head == NULL) {
+        return SHELL_OK;
+    }
+
+    int swapped;
+
+    do {
+        swapped = 0;
+
+        Student* prev = NULL;
+        Student* curr = *head;
+
+        while (curr != NULL && curr->next != NULL) {
+            Student* next = curr->next;
+
+            int needSwap = 0;
+
+            if (byName) {
+                if (strcmp(curr->name, next->name) > 0)
+                    needSwap = 1;
+            }
+
+            if (byScore) {
+                if (curr->score > next->score)
+                    needSwap = 1;
+            }
+
+            if (needSwap) {
+                curr->next = next->next;
+                next->next = curr;
+
+                if (prev == NULL)
+                    *head = next;
+                else
+                    prev->next = next;
+
+                prev = next;
+                swapped = 1;
+            }
+            else {
+                prev = curr;
+                curr = curr->next;
+            }
+        }
+
+    } while (swapped);
+
+    isModified = 1;
+
+    if (byName)
+        printf("sorted by name\n");
+    else
+        printf("sorted by score\n");
+
     return SHELL_OK;
 }
 
