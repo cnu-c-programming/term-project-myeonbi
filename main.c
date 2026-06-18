@@ -1,93 +1,157 @@
 /*
  * main.c  –  Mini Student Shell
- *
- * TODO: Implement admin_shell and client_shell.
- *
- * Build:
- *   make admin   →  admin_shell  (compiled with -DADMIN_MODE)
- *   make client  →  client_shell (compiled with -DCLIENT_MODE)
- *
- * Usage:
- *   ./admin_shell [students.csv]
- *   ./admin_shell -f commands.txt [students.csv]
- *   ./client_shell [students.csv]
- *   ./client_shell -f commands.txt [students.csv]
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+ #include "student.h"
+ #include "file_io.h"
+ #include "command.h"
+ 
+ #define INPUT_SIZE 256
+ 
+ static void print_usage(void) {
+ #ifdef ADMIN_MODE
+     printf("Usage: ./admin_shell <csv_file> [-f command_file]\n");
+ #else
+     printf("Usage: ./client_shell <csv_file> [-f command_file]\n");
+ #endif
+ }
+ 
 
-/* TODO: Add your own header includes here */
-/* #include "student.h"  */
-/* #include "file_io.h"  */
-/* #include "command.h"  */
+ void run_shell(const char *csv_path) {
+     Student* head = NULL;
+     char input[INPUT_SIZE];
+     int count;
+ 
+     setCSVPath(csv_path);
+ 
+     count = loadCSV(csv_path, &head);
+     if (count < 0) {
+         return;
+     }
+ 
+ #ifdef ADMIN_MODE
+     printf("[Admin Program]\n");
+     printf("Loaded %d students from %s.\n", count, csv_path);
+ #else
+     printf("[Client Program]\n");
+     printf("Loaded %d students from %s.\n", count, csv_path);
+ #endif
+ 
+     while (1) {
+ #ifdef ADMIN_MODE
+         printf("admin> ");
+ #else
+         printf("client> ");
+ #endif
+ 
+         if (fgets(input, sizeof(input), stdin) == NULL) {
+             break;
+         }
+ 
+         ShellResult result = executeCommand(input, &head);
+ 
+         if (result == SHELL_EXIT) {
+             break;
+         }
+     }
+ 
+     freeStudents(head);
+ }
+ 
+ void run_command_file(const char *cmd_file, const char *csv_path) {
+    Student* head = NULL;
+    FILE* fp;
+    char input[INPUT_SIZE];
+    int lineNumber = 0;
+    int count;
 
-/* ---------------------------------------------------------------
- * TODO: Implement the interactive shell loop.
- *   - Print a prompt and read a line from stdin.
- *   - Parse the line into a command and arguments.
- *   - Dispatch to the appropriate handler function.
- *   - Loop until the user types "exit" or EOF.
- * --------------------------------------------------------------- */
-void run_shell(const char *csv_path) {
-    /* TODO */
-    (void)csv_path;
-}
+    setCSVPath(csv_path);
 
-/* ---------------------------------------------------------------
- * TODO: Implement batch mode – read commands from a file.
- *   - Open cmd_file for reading.
- *   - Execute each line as a command (same logic as run_shell).
- *   - Close the file when done.
- * --------------------------------------------------------------- */
-void run_command_file(const char *cmd_file, const char *csv_path) {
-    /* TODO */
-    (void)cmd_file;
-    (void)csv_path;
-}
-
-int main(int argc, char *argv[]) {
-    const char *csv_path  = "students.csv"; /* default CSV file */
-    const char *cmd_file  = NULL;           /* -f <file> argument */
-
-    /* TODO: Parse command-line arguments.
-     *   Supported flags:
-     *     -f <file>   run commands from <file> instead of stdin
-     *   Remaining positional argument (if any): path to students CSV.
-     *
-     *   Example parsing skeleton:
-     *
-     *   for (int i = 1; i < argc; i++) {
-     *       if (strcmp(argv[i], "-f") == 0 && i + 1 < argc) {
-     *           cmd_file = argv[++i];
-     *       } else {
-     *           csv_path = argv[i];
-     *       }
-     *   }
-     */
-    (void)argc;
-    (void)argv;
+    count = loadCSV(csv_path, &head);
+    if (count < 0) {
+        return;
+    }
 
 #ifdef ADMIN_MODE
-    /* Admin shell: supports add, delete, update, save, load, sort, list, find, help, exit */
-    if (cmd_file) {
-        run_command_file(cmd_file, csv_path);
-    } else {
-        run_shell(csv_path);
-    }
-
-#elif defined(CLIENT_MODE)
-    /* Client shell: supports find, list, help, exit  (read-only) */
-    if (cmd_file) {
-        run_command_file(cmd_file, csv_path);
-    } else {
-        run_shell(csv_path);
-    }
-
+    printf("[Admin Program]\n");
 #else
-#error "Define either -DADMIN_MODE or -DCLIENT_MODE when compiling."
+    printf("[Client Program]\n");
 #endif
+    printf("Loaded %d students from %s.\n", count, csv_path);
 
-    return 0;
+    fp = fopen(cmd_file, "r");
+
+    if (fp == NULL) {
+        printf("Error: cannot open command file.\n");
+        freeStudents(head);
+        return;
+    }
+
+    while (fgets(input, sizeof(input), fp) != NULL) {
+        lineNumber++;
+
+        input[strcspn(input, "\n")] = '\0';
+
+        char* line = input;
+        while (*line == ' ' || *line == '\t') {
+            line++;
+        }
+
+        if (*line == '\0' || *line == '#') {
+            continue;
+        }
+
+        printf("[command file:%d] %s\n", lineNumber, line);
+
+        ShellResult result = executeCommand(line, &head);
+
+        if (result == SHELL_EXIT) {
+            break;
+        }
+
+        if (result != SHELL_OK) {
+            printf("Skipped line %d.\n", lineNumber);
+        }
+    }
+
+    fclose(fp);
+    freeStudents(head);
 }
+ 
+ int main(int argc, char *argv[]) {
+     const char *csv_path = NULL;
+     const char *cmd_file = NULL;
+ 
+     if (argc < 2) {
+         print_usage();
+         return 1;
+     }
+ 
+     for (int i = 1; i < argc; i++) {
+         if (strcmp(argv[i], "-f") == 0) {
+             if (i + 1 >= argc) {
+                 print_usage();
+                 return 1;
+             }
+             cmd_file = argv[++i];
+         } else {
+             csv_path = argv[i];
+         }
+     }
+ 
+     if (csv_path == NULL) {
+         print_usage();
+         return 1;
+     }
+ 
+     if (cmd_file != NULL) {
+         run_command_file(cmd_file, csv_path);
+     } else {
+         run_shell(csv_path);
+     }
+ 
+     return 0;
+ }

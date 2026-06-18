@@ -26,6 +26,7 @@ typedef struct {
     const char* description;
 } Command;
 
+void setCSVPath(const char* path);
 ShellResult executeCommand(char* input, Student** head);
 
 #endif
