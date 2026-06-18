@@ -1,0 +1,42 @@
+# add 예외
+
+add 1 Kim 90
+add abc Kim 90
+add 0 Kim 90
+add -1 Kim 90
+add 6 Kim 101
+add 6 Kim -1
+add 6 Kim abc
+add 6 Kim
+add
+
+# delete 예외
+
+delete 999
+delete abc
+delete 0
+delete -1
+
+# update 예외
+
+update 999 80
+update 1 abc
+update 1 101
+update 1 -1
+update 1
+update
+
+# find 예외
+
+find 999
+find abc
+find 0
+find -1
+
+# sort 예외
+
+sort badkey
+
+# 종료
+
+exit
