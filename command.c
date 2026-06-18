@@ -7,6 +7,7 @@
 #include "file_io.h"
 
 static const char* currentCSVPath = NULL;
+static int isModified = 0;
 
 static ShellResult handle_save(char* args, Student** head);
 static ShellResult handle_reload(char* args, Student** head);
@@ -129,7 +130,7 @@ static ShellResult handle_save(char* args, Student** head) {
     if (count < 0) {
         return SHELL_ERR_FILE_WRITE;
     }
-
+    isModified = 0;
     printf("Saved %d students to %s.\n", count, currentCSVPath);
     return SHELL_OK;
 }
@@ -145,7 +146,7 @@ static ShellResult handle_reload(char* args, Student** head) {
     if (count < 0) {
         return SHELL_ERR_FILE_OPEN;
     }
-
+    isModified = 0;
     printf("Reloaded %d students from %s.\n", count, currentCSVPath);
     return SHELL_OK;
 }
@@ -179,6 +180,7 @@ static ShellResult handle_add(char* args, Student** head) {
 
     appendStudent(head, newStudent);
     printf("Student added.\n");
+    isModified = 1;
     return SHELL_OK;
 }
 
@@ -195,6 +197,7 @@ static ShellResult handle_delete(char* args, Student** head) {
         return SHELL_ERR_STUDENT_NOT_FOUND;
     }
 
+    isModified = 1;
     printf("Student deleted.\n");
     return SHELL_OK;
 }
@@ -219,6 +222,7 @@ static ShellResult handle_update(char* args, Student** head) {
         return SHELL_ERR_STUDENT_NOT_FOUND;
     }
 
+    isModified = 1;
     printf("Student updated.\n");
     return SHELL_OK;
 }
@@ -321,6 +325,10 @@ static ShellResult handle_clear(char* args, Student** head) {
 static ShellResult handle_exit(char* args, Student** head) {
     (void)args;
     (void)head;
+
+    if (isModified) {
+        printf("Warning: unsaved changes.\n");
+    }
 
     printf("Goodbye.\n");
     return SHELL_EXIT;
